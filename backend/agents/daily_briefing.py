@@ -1,5 +1,5 @@
 import anthropic
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 from ..config import settings
 from ..models.application import Application, ApplicationStatus
@@ -8,7 +8,15 @@ client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 
 async def generate_daily_briefing(db: Session, user_id: int) -> str:
-    today = date.today()
+    now = datetime.now()
+    today = now.date()
+    hour = now.hour
+    if hour < 12:
+        greeting = "Good Morning"
+    elif hour < 17:
+        greeting = "Good Afternoon"
+    else:
+        greeting = "Good Evening"
     two_weeks = today + timedelta(days=14)
 
     all_apps = db.query(Application).filter(Application.user_id == user_id).all()
@@ -47,10 +55,10 @@ async def generate_daily_briefing(db: Session, user_id: int) -> str:
     response = await client.messages.create(
         model=settings.claude_model,
         max_tokens=1024,
-        system="""You are a personal PhD application coach giving a morning briefing.
+        system=f"""You are a personal PhD application coach giving a briefing.
         Be concise, motivating, and specific.
         Structure your response as:
-        ## Good Morning — Here's Your PhD Focus for Today
+        ## {greeting} — Here's Your PhD Focus for Today
         ### Urgent (do today)
         ### This Week
         ### Overall Progress
