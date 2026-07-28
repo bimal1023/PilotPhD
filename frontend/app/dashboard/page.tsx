@@ -8,41 +8,70 @@ import { fetchApplicationsCached } from "@/lib/applicationsCache"
 
 type Application = { id: number; university: string; program: string; status: string }
 
-// Status reads as a printed mark — a small square plus a word, not a pill.
-const statusConfig: Record<string, { text: string; mark: string }> = {
-  planning:  { text: "text-ink-faint", mark: "bg-ink-faint" },
-  applied:   { text: "text-slate",     mark: "bg-slate" },
-  waiting:   { text: "text-ochre",     mark: "bg-ochre" },
-  accepted:  { text: "text-sage",      mark: "bg-sage" },
-  rejected:  { text: "text-accent",    mark: "bg-accent" },
-  withdrawn: { text: "text-ink-faint", mark: "bg-rule-strong" },
+const statusConfig: Record<string, { color: string; dot: string }> = {
+  planning:  { color: "bg-gray-100 text-gray-600",    dot: "bg-gray-400" },
+  applied:   { color: "bg-blue-50 text-blue-600",     dot: "bg-blue-500" },
+  waiting:   { color: "bg-amber-50 text-amber-600",   dot: "bg-amber-400" },
+  accepted:  { color: "bg-green-50 text-green-600",   dot: "bg-green-500" },
+  rejected:  { color: "bg-red-50 text-red-500",       dot: "bg-red-400" },
+  withdrawn: { color: "bg-orange-50 text-orange-500", dot: "bg-orange-400" },
 }
 
-const tools = [
+const quickActions = [
   {
     href: "/professors",
     label: "Find Professors",
     description: "Discover researchers whose work aligns with yours",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="6" cy="5" r="2.5" stroke="#2563eb" strokeWidth="1.2"/>
+        <path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" stroke="#2563eb" strokeWidth="1.2" strokeLinecap="round"/>
+        <path d="M11 2.5a2 2 0 010 4M14 13c0-1.8-1.2-3-3-3.5" stroke="#2563eb" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    ),
   },
   {
     href: "/email",
     label: "Draft Email",
     description: "Write a personalized cold email to a professor",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 3.5h12a.5.5 0 01.5.5v8a.5.5 0 01-.5.5H2a.5.5 0 01-.5-.5V4a.5.5 0 01.5-.5z" stroke="#2563eb" strokeWidth="1.2"/>
+        <path d="M1.5 4l6.5 4.5L14.5 4" stroke="#2563eb" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    ),
   },
   {
     href: "/statement",
     label: "Refine Statement",
     description: "Get expert feedback on your personal statement",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="2" width="12" height="12" rx="2" stroke="#2563eb" strokeWidth="1.2"/>
+        <path d="M5 5.5h6M5 8h4M5 10.5h3" stroke="#2563eb" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    ),
   },
   {
     href: "/fellowships",
     label: "Find Fellowships",
     description: "Discover funding opportunities for your research",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 1.5l1.6 3.2 3.5.5-2.5 2.5.6 3.5L8 9.5l-3.2 1.7.6-3.5L3 5.2l3.5-.5L8 1.5z" stroke="#2563eb" strokeWidth="1.2" strokeLinejoin="round"/>
+      </svg>
+    ),
   },
   {
     href: "/briefing",
     label: "Daily Briefing",
     description: "Get your personalized morning summary",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="6" stroke="#2563eb" strokeWidth="1.2"/>
+        <path d="M8 4.5v3.5l2 2" stroke="#2563eb" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    ),
   },
 ]
 
@@ -79,9 +108,9 @@ export default function Dashboard() {
 
   const stats = [
     { label: "Total",     value: total,     sub: "applications" },
-    { label: "Submitted", value: submitted, sub: "sent" },
-    { label: "Waiting",   value: waiting,   sub: "in review" },
-    { label: "Accepted",  value: accepted,  sub: "offers" },
+    { label: "Submitted", value: submitted,  sub: "sent" },
+    { label: "Waiting",   value: waiting,    sub: "in review" },
+    { label: "Accepted",  value: accepted,   sub: "offers" },
   ]
 
   const hour = new Date().getHours()
@@ -89,125 +118,76 @@ export default function Dashboard() {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
 
   return (
-    <div>
-      {/* ── Masthead ─────────────────────────────────────────────── */}
-      <header className="rise">
-        <h1 className="font-display text-[2.75rem] md:text-[4rem] leading-[0.95] font-semibold text-ink">
-          {greeting}
-          {userName ? (
-            <>
-              ,<br className="hidden md:block" />
-              <span className="text-accent"> {userName}</span>
-            </>
-          ) : ""}
+    <div className="space-y-10">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {greeting}{userName ? `, ${userName}` : ""}
         </h1>
-        <div
-          className="h-px bg-rule-strong mt-7 rule-draw"
-          style={{ animationDelay: "0.15s" }}
-        />
-        <p className="label text-ink-faint mt-3">
-          {today} <span className="text-rule-strong mx-1.5">/</span> Application overview
-        </p>
-      </header>
+        <p className="text-sm text-gray-400">{today} · Here&apos;s your PhD application overview</p>
+      </div>
 
-      {/* ── Ledger ───────────────────────────────────────────────── */}
-      <section
-        className="mt-12 grid grid-cols-2 md:grid-cols-4 border-t border-rule rise"
-        style={{ animationDelay: "0.1s" }}
-      >
-        {stats.map((stat, i) => (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {stats.map((stat) => (
           <Link
             key={stat.label}
             href="/applications"
-            className={`group py-6 md:py-7 border-b border-rule transition-colors hover:bg-paper-raised
-              ${i % 2 === 0 ? "pr-5" : "pl-5 md:pl-6"}
-              ${i > 0 ? "md:border-l md:border-rule md:pl-6" : ""}
-              ${i % 2 === 1 ? "border-l border-rule" : ""}`}
+            className="bg-white rounded-xl border border-gray-100 p-5 hover:border-gray-200 transition-all group"
           >
-            <p className="label text-ink-faint">{stat.label}</p>
-            <p className="font-display tnum text-[3.25rem] leading-none font-semibold text-ink mt-2.5 transition-colors group-hover:text-accent">
-              {String(stat.value).padStart(2, "0")}
-            </p>
-            <p className="text-[0.8125rem] text-ink-soft mt-2">{stat.sub}</p>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{stat.label}</p>
+            <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+            <p className="text-xs text-gray-400 mt-1">{stat.sub}</p>
           </Link>
         ))}
-      </section>
+      </div>
 
-      {/* ── Recent applications ──────────────────────────────────── */}
       {applications.length > 0 && (
-        <section className="mt-16 rise" style={{ animationDelay: "0.2s" }}>
-          <div className="flex items-baseline justify-between border-b border-rule-strong pb-2.5">
-            <h2 className="label text-ink">Recent Applications</h2>
-            <Link
-              href="/applications"
-              className="label text-ink-faint hover:text-accent transition-colors"
-            >
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Recent Applications</p>
+            <Link href="/applications" className="text-xs text-blue-500 hover:text-blue-700 transition-colors">
               View all →
             </Link>
           </div>
-
-          <ul>
-            {applications.slice(0, 3).map((app, i) => {
-              const status = statusConfig[app.status] ?? statusConfig.planning
-              return (
-                <li key={app.id}>
-                  <Link
-                    href="/applications"
-                    className="entry flex items-baseline gap-4 md:gap-6 py-5 border-b border-rule -mx-3 px-3"
-                  >
-                    <span className="entry-num label tnum text-ink-faint shrink-0">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block font-display text-xl md:text-[1.4rem] text-ink leading-tight truncate">
-                        {app.university}
-                      </span>
-                      <span className="block text-sm text-ink-soft mt-1 truncate">
-                        {app.program}
-                      </span>
-                    </span>
-                    <span className={`label flex items-center gap-2 shrink-0 ${status.text}`}>
-                      <span className={`w-1.5 h-1.5 ${status.mark}`} />
-                      {app.status}
-                    </span>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
+          <div className="space-y-2">
+            {applications.slice(0, 3).map((app) => (
+              <div key={app.id} className="bg-white rounded-xl border border-gray-100 px-5 py-4 flex items-center justify-between hover:border-gray-200 transition-all">
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${statusConfig[app.status]?.dot ?? "bg-gray-300"}`} />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{app.university}</p>
+                    <p className="text-xs text-gray-400">{app.program}</p>
+                  </div>
+                </div>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusConfig[app.status]?.color ?? "bg-gray-100 text-gray-600"}`}>
+                  {app.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
-      {/* ── Tools, set as a table of contents ────────────────────── */}
-      <section className="mt-16 rise" style={{ animationDelay: "0.3s" }}>
-        <h2 className="label text-ink border-b border-rule-strong pb-2.5">Tools</h2>
-        <ul>
-          {tools.map((tool, i) => (
-            <li key={tool.href}>
-              <Link
-                href={tool.href}
-                prefetch={false}
-                className="entry group flex items-baseline gap-4 md:gap-6 py-5 border-b border-rule -mx-3 px-3"
-              >
-                <span className="entry-num label tnum text-ink-faint shrink-0">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block font-display text-xl md:text-[1.4rem] text-ink leading-tight transition-colors group-hover:text-accent">
-                    {tool.label}
-                  </span>
-                  <span className="block text-sm text-ink-soft mt-1">
-                    {tool.description}
-                  </span>
-                </span>
-                <span className="text-ink-faint shrink-0 transition-all duration-300 group-hover:text-accent group-hover:translate-x-1">
-                  →
-                </span>
-              </Link>
-            </li>
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Tools</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {quickActions.map((action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              prefetch={false}
+              className="group bg-white rounded-xl border border-gray-100 p-5 hover:border-blue-200 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5">{action.icon}</span>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm group-hover:text-blue-600 transition-colors">{action.label}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{action.description}</p>
+                </div>
+              </div>
+            </Link>
           ))}
-        </ul>
-      </section>
+        </div>
+      </div>
     </div>
   )
 }

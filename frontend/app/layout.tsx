@@ -1,28 +1,11 @@
 import type { Metadata } from "next";
-import { Fraunces, Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import NavBar from "@/components/NavBar";
 import "./globals.css";
 
-// Display serif with optical-size and the SOFT/WONK axes, so headings carry
-// real personality instead of reading as a default system serif.
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const geist = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  axes: ["SOFT", "WONK", "opsz"],
-  display: "swap",
-});
-
-const instrument = Instrument_Sans({
-  variable: "--font-instrument",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -36,13 +19,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${fraunces.variable} ${instrument.variable} ${plexMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-paper text-ink">
+    <html lang="en" className={`${geist.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col bg-[#fafafa] text-gray-900">
         <NavBar />
-        <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto px-5 md:px-8 py-10 md:py-16">
+        <main className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-6 py-6 md:py-10">
           {children}
         </main>
       </body>

@@ -16,17 +16,6 @@ const navLinks = [
 
 type User = { name: string; email: string }
 
-function Wordmark({ href }: { href: string }) {
-  return (
-    <Link href={href} className="flex items-baseline gap-2.5 shrink-0 group">
-      <span className="w-[3px] h-5 bg-accent self-center transition-transform duration-300 group-hover:scale-y-125" />
-      <span className="font-display text-[19px] font-semibold text-ink leading-none">
-        PilotPhD
-      </span>
-    </Link>
-  )
-}
-
 function MobileMenu({
   open,
   onClose,
@@ -43,50 +32,51 @@ function MobileMenu({
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 md:hidden" onClick={onClose}>
-      <div className="absolute inset-0 bg-ink/20 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
       <div
-        className="absolute top-[65px] left-0 right-0 bg-paper border-y border-rule shadow-[0_18px_40px_-20px_rgba(23,21,15,0.35)]"
+        className="absolute top-14 left-0 right-0 bg-white border-b border-gray-100 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <nav className="px-5 py-3">
+        <nav className="p-3 space-y-1">
           {user ? (
             <>
-              {navLinks.map((link, i) => (
+              {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={onClose}
                   prefetch={false}
-                  className={`flex items-baseline gap-4 py-3 border-b border-rule/70 transition-colors ${
-                    pathname === link.href ? "text-accent" : "text-ink hover:text-accent"
+                  className={`block w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all ${
+                    pathname === link.href
+                      ? "bg-blue-50 text-blue-600 font-medium"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   }`}
                 >
-                  <span className="label tnum text-ink-faint">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="font-display text-lg">{link.label}</span>
+                  {link.label}
                 </Link>
               ))}
-              <button
-                onClick={() => { onSignOut(); onClose() }}
-                className="label text-ink-faint hover:text-accent transition-colors pt-4 pb-1"
-              >
-                Sign out
-              </button>
+              <div className="border-t border-gray-100 mt-2 pt-2">
+                <button
+                  onClick={() => { onSignOut(); onClose() }}
+                  className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-all"
+                >
+                  Sign out
+                </button>
+              </div>
             </>
           ) : (
             <>
               <Link
                 href="/login"
                 onClick={onClose}
-                className="block py-3 border-b border-rule/70 font-display text-lg text-ink"
+                className="block px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all"
               >
                 Sign in
               </Link>
               <Link
                 href="/login"
                 onClick={onClose}
-                className="block py-3 font-display text-lg text-accent"
+                className="block px-3 py-2.5 rounded-lg text-sm bg-blue-600 text-white font-medium text-center hover:bg-blue-700 transition-all"
               >
                 Sign up free
               </Link>
@@ -141,23 +131,31 @@ export default function NavBar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-paper/85 backdrop-blur-md border-b border-rule">
-        <div className="max-w-5xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between gap-6">
-          <Wordmark href={user ? "/dashboard" : "/"} />
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between relative">
+          {/* Logo */}
+          <Link
+            href={user ? "/dashboard" : "/"}
+            className="flex items-center gap-2 shrink-0"
+          >
+            <span className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+              P
+            </span>
+            <span className="font-semibold text-gray-900 text-sm">PilotPhD</span>
+          </Link>
 
-          {/* Desktop nav — only when authenticated and off the landing page */}
+          {/* Desktop nav — only when authenticated and not on landing */}
           {showAppNav && (
-            <nav className="hidden md:flex items-center gap-7">
+            <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   prefetch={false}
-                  data-active={pathname === link.href}
-                  className={`nav-link label transition-colors ${
+                  className={`px-3 py-1.5 text-sm rounded-md transition-all ${
                     pathname === link.href
-                      ? "text-ink"
-                      : "text-ink-soft hover:text-ink"
+                      ? "text-gray-900 bg-gray-100 font-medium"
+                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
                   {link.label}
@@ -166,15 +164,14 @@ export default function NavBar() {
             </nav>
           )}
 
-          {/* Right side — held until mounted to avoid an SSR/hydration flash */}
-          <div className="flex items-center gap-4 shrink-0">
+          {/* Right side — hidden until mounted to prevent SSR/hydration flash */}
+          <div className="flex items-center gap-2">
             {mounted && user ? (
               <>
-                <span className="hidden md:block label text-ink-faint">{user.name}</span>
-                <span className="hidden md:block w-px h-3.5 bg-rule-strong" />
+                <span className="hidden md:block text-xs text-gray-400">{user.name}</span>
                 <button
                   onClick={signOut}
-                  className="hidden md:block label text-ink-faint hover:text-accent transition-colors"
+                  className="hidden md:flex text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1 rounded-md hover:bg-gray-50"
                 >
                   Sign out
                 </button>
@@ -183,34 +180,34 @@ export default function NavBar() {
               <>
                 <Link
                   href="/login"
-                  className="hidden md:block label text-ink-soft hover:text-ink transition-colors"
+                  className="hidden md:flex items-center text-xs text-gray-500 hover:text-gray-900 transition-colors px-3 py-1.5 rounded-md hover:bg-gray-100"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/login"
-                  className="hidden md:block label text-paper bg-accent hover:bg-ink transition-colors px-3.5 py-2"
+                  className="hidden md:flex items-center text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 transition-all font-medium"
                 >
                   Sign up
                 </Link>
               </>
             ) : (
-              <div className="hidden md:block w-28 h-5" /> /* placeholder holds layout */
+              <div className="hidden md:block w-24 h-6" /> /* placeholder to hold layout */
             )}
 
             {/* Mobile hamburger */}
             <button
-              className="md:hidden w-8 h-8 -mr-1 flex items-center justify-center text-ink-soft hover:text-accent transition-colors"
+              className="md:hidden w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-md transition-all"
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="Menu"
             >
               {mobileOpen ? (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+                  <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               ) : (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 4.5h12M2 8h12M2 11.5h8" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+                  <path d="M2 5h12M2 8h12M2 11h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               )}
             </button>
