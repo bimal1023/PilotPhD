@@ -10,7 +10,15 @@ automatic HTTPS.
 - Postgres data lives on a **separate EBS volume** mounted at `/mnt/data`, so it
   survives instance rebuilds. The root volume does not.
 
-Fill in as you go: instance ID `______` · Elastic IP `______`
+Live resources (`us-east-2`, AZ `us-east-2a`):
+
+| | |
+|---|---|
+| Instance | `i-05fdb109cdc305c90` (t4g.medium) |
+| Elastic IP | `13.58.13.142` (`eipalloc-0113f00c0f9a95f51`) |
+| Data volume | `vol-0f2d7bedfa3c08bc5` (10 GB gp3 → `/mnt/data`) |
+| Security group | `sg-0a760148062784f81` |
+| SSH | `ssh -i ~/.ssh/pilotphd-key.pem ec2-user@13.58.13.142` |
 
 ## ⚠️ Rule #1: build ONE image at a time
 
@@ -97,6 +105,13 @@ sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
+# buildx — NOT included in Amazon Linux's docker package, and `compose build`
+# fails with "requires buildx 0.17.0 or later" without it.
+BUILDX_URL=$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest \
+  | grep -o "https://[^\"]*buildx-v[0-9.]*\.linux-arm64" | head -1)
+sudo curl -fsSL "$BUILDX_URL" -o /usr/local/lib/docker/cli-plugins/docker-buildx
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+
 # 4 GB swap — the Next.js build is the memory-hungry step; this is the
 # safety net behind Rule #1.
 sudo dd if=/dev/zero of=/swapfile bs=1M count=4096
@@ -118,16 +133,25 @@ exit   # log back in so the docker group applies
 
 ### 4. First deploy
 
+Always give the source as an **absolute path**, never `./`. With `--delete`, a
+relative source run from the wrong directory (e.g. `backend/`) syncs that folder
+*as* the repo root and deletes everything else on the box — and the
+`backend/.env` / `infra/.env` exclusions stop matching, so local secrets get
+copied up. This has actually happened.
+
 ```bash
-# From your laptop, in the repo root — never syncs infra/.env
+# From your laptop — absolute source path, never syncs infra/.env
 rsync -az --delete \
   --exclude='.git' --exclude='venv' --exclude='.venv' \
   --exclude='node_modules' --exclude='frontend/.next' \
   --exclude='__pycache__' --exclude='*.pyc' \
   --exclude='infra/.env' --exclude='backend/.env' --exclude='frontend/.env.local' \
   -e "ssh -i ~/.ssh/pilotphd-key.pem" \
-  ./ ec2-user@<ELASTIC_IP>:/opt/pilotphd/app/
+  ~/pilotphd/ ec2-user@<ELASTIC_IP>:/opt/pilotphd/app/
 ```
+
+Add `--dry-run` first if you're unsure; a long list of deletions means the source
+path is wrong.
 
 On the box:
 
@@ -161,7 +185,7 @@ confirmed, since it's what keeps the old Vercel deployment working meanwhile.
 ## Redeploying code
 
 ```bash
-# laptop — rsync as above, then ONE of these (never both in one command):
+# laptop — rsync as above (absolute path!), then ONE of these (never both):
 ssh -i ~/.ssh/pilotphd-key.pem ec2-user@<ELASTIC_IP> \
   "cd /opt/pilotphd/app/infra && docker compose -f docker-compose.prod.yml up -d --build frontend"
 
@@ -212,6 +236,28 @@ build time, so changing it requires `--build frontend`, not a restart.
 **Logged in, then 401s** — confirm `ENVIRONMENT=production` in `infra/.env` and
 that you're on `https://`. Cookies are `Secure` in production and won't be sent
 over plain HTTP.
+
+**SSH times out** — your ISP rotates your public IP, and the security group
+allows port 22 from specific `/32`s only. This *will* recur. Note that
+`curl checkip.amazonaws.com` can report a proxy address rather than your real
+SSH source, so trust the server's view when you can. Re-add the current address:
+
+```bash
+aws ec2 authorize-security-group-ingress --region us-east-2 \
+  --group-id sg-0a760148062784f81 \
+  --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=$(curl -s https://checkip.amazonaws.com)/32}]"
+```
+
+If that doesn't work, the address is wrong. Briefly allow `0.0.0.0/0` on port 22,
+`ssh` in, run `echo $SSH_CLIENT | cut -d' ' -f1` to see the address the box
+actually receives, then revoke `0.0.0.0/0` and add that `/32`. For a permanent
+fix, attach an IAM role with `AmazonSSMManagedInstanceCore` and use SSM Session
+Manager, which needs no inbound port at all.
+
+**Backend exits immediately with `openai.OpenAIError: Missing credentials`** —
+`OPENAI_API_KEY` is blank in `infra/.env`. Unlike the Anthropic SDK it replaced,
+the OpenAI client raises at construction on an empty string, so the app dies at
+import rather than at first request. It must be non-empty for the box to boot.
 
 **Box unresponsive, low CPU** — memory exhaustion. Elastic IP and data volume
 survive a force power-cycle:

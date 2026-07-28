@@ -1,37 +1,42 @@
-import anthropic
+import json
 import httpx
 from ..config import settings
-
-client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+from .llm import client
 
 tools = [
     {
-        "name": "web_search",
-        "description": "Search the web for a professor's recent research and publications",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "The search query"
-                }
-            },
-            "required": ["query"]
+        "type": "function",
+        "function": {
+            "name": "web_search",
+            "description": "Search the web for a professor's recent research and publications",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query"
+                    }
+                },
+                "required": ["query"]
+            }
         }
     },
     {
-        "name": "read_document",
-        "description": "Read the user's personal statement or research interest document",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "document_type": {
-                    "type": "string",
-                    "enum": ["personal_statement", "research_interest"],
-                    "description": "Which document to read"
-                }
-            },
-            "required": ["document_type"]
+        "type": "function",
+        "function": {
+            "name": "read_document",
+            "description": "Read the user's personal statement or research interest document",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "document_type": {
+                        "type": "string",
+                        "enum": ["personal_statement", "research_interest"],
+                        "description": "Which document to read"
+                    }
+                },
+                "required": ["document_type"]
+            }
         }
     }
 ]
@@ -75,6 +80,10 @@ IMPORTANT — search result safety:
 async def draft_email(professor_name: str, university: str, user_documents: dict) -> str:
     messages = [
         {
+            "role": "system",
+            "content": SYSTEM_PROMPT
+        },
+        {
             "role": "user",
             "content": f"""Draft a personalized cold email to Professor {professor_name}
             at {university}.
@@ -86,35 +95,39 @@ async def draft_email(professor_name: str, university: str, user_documents: dict
 
     iterations = 0
     while iterations < 6:
-        response = await client.messages.create(
-            model=settings.claude_model,
-            max_tokens=2048,
-            system=SYSTEM_PROMPT,
+        response = await client.chat.completions.create(
+            model=settings.openai_model,
+            max_completion_tokens=2048,
             tools=tools,
+            # Required: gpt-5.6 rejects function tools in /v1/chat/completions
+            # unless reasoning is off ("Function tools with reasoning_effort are
+            # not supported"). The alternative is porting to /v1/responses.
+            reasoning_effort="none",
             messages=messages
         )
 
-        if response.stop_reason == "end_turn":
-            if not response.content:
-                raise ValueError("Empty response from Claude")
-            return response.content[0].text
+        choice = response.choices[0]
 
-        if response.stop_reason == "tool_use":
+        if choice.finish_reason == "stop":
+            if not choice.message.content:
+                raise ValueError("Empty response from the model")
+            return choice.message.content
+
+        if choice.finish_reason == "tool_calls":
             iterations += 1
-            messages.append({"role": "assistant", "content": response.content})
+            # The assistant message carrying the tool_calls must be echoed back
+            # before the results, or the follow-up request is rejected.
+            messages.append(choice.message)
 
-            tool_results = []
-            for block in response.content:
-                if block.type == "tool_use":
-                    result = await execute_tool(block.name, block.input, user_documents)
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": result
-                    })
-
-            messages.append({"role": "user", "content": tool_results})
+            for call in choice.message.tool_calls:
+                tool_input = json.loads(call.function.arguments)
+                result = await execute_tool(call.function.name, tool_input, user_documents)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "content": result
+                })
         else:
-            raise ValueError(f"Unexpected stop reason: {response.stop_reason}")
+            raise ValueError(f"Unexpected finish reason: {choice.finish_reason}")
 
     raise ValueError("Email drafter exceeded maximum iterations")

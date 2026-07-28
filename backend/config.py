@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     )
 
     database_url: str
-    anthropic_api_key: str
+    openai_api_key: str
     brave_api_key: str = ""
     # Comma-separated list of allowed origins, e.g. "https://pilotphd.vercel.app,https://www.pilotphd.com"
     frontend_url: str = "http://localhost:3000"
@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     from_email: str = "onboarding@resend.dev"
     environment: str = "development"
 
-    claude_model: str = "claude-sonnet-4-20250514"
+    # gpt-5.6 is the flagship alias; -terra balances cost and intelligence,
+    # -luna is the budget tier.
+    openai_model: str = "gpt-5.6-terra"
 
     @property
     def is_production(self) -> bool:
@@ -31,6 +33,16 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.frontend_url.split(",") if o.strip()]
+
+    @property
+    def frontend_base_url(self) -> str:
+        """Single origin to build links in emails from.
+
+        frontend_url is a comma-separated CORS allowlist, so interpolating it
+        directly yields a malformed URL as soon as more than one origin is set.
+        """
+        origins = self.cors_origins
+        return origins[0] if origins else "http://localhost:3000"
 
 
 @lru_cache

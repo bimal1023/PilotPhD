@@ -7,7 +7,7 @@
 ## Features
 
 - **Application Tracker** — Create and manage PhD applications with status, deadlines, professors, and research interests.
-- **Email Drafter** — Generate personalized cold emails to professors using Claude AI, researching their work automatically.
+- **Email Drafter** — Generate personalized cold emails to professors using OpenAI models, researching their work automatically.
 - **Statement Refiner** — Get structured critique and a rewritten draft of your personal statement.
 - **Fellowship Finder** — Discover funding opportunities (NSF GRFP, NDSEG, Hertz, Ford, and more) tailored to your research profile.
 - **Professor Finder** — Search faculty across universities via OpenAlex, ranked by AI for fit with your research interests.
@@ -22,7 +22,7 @@
 |---|---|
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS |
 | Backend | FastAPI, SQLAlchemy, PostgreSQL |
-| AI | Anthropic Claude (claude-sonnet-4-20250514) |
+| AI | OpenAI (gpt-5.6-terra) |
 | Research APIs | OpenAlex, Brave Search |
 | Email | Resend |
 | Deployment | Docker (backend), Vercel (frontend) |
@@ -36,7 +36,7 @@
 - Python 3.11+
 - Node.js 18+
 - PostgreSQL database
-- Anthropic API key
+- OpenAI API key
 - (Optional) Brave Search API key, Resend API key
 
 ### Backend
@@ -92,12 +92,12 @@ The app runs at `http://localhost:3000`.
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `ANTHROPIC_API_KEY` | Yes | Anthropic Claude API key |
+| `OPENAI_API_KEY` | Yes | OpenAI API key |
 | `SECRET_KEY` | Yes | JWT signing secret (random string) |
 | `FRONTEND_URL` | Yes | Frontend origin for CORS (e.g. `http://localhost:3000`) |
 | `BRAVE_API_KEY` | No | Brave Search API key (Fellowship Finder) |
 | `RESEND_API_KEY` | No | Resend API key (email verification & password reset) |
-| `CLAUDE_MODEL` | No | Claude model ID (default: `claude-sonnet-4-20250514`) |
+| `OPENAI_MODEL` | No | OpenAI model ID (default: `gpt-5.6-terra`) |
 
 ### Frontend (`frontend/.env.local`)
 

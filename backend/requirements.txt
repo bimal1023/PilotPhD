@@ -8,4 +8,4 @@ pydantic[email]==2.13.3
 python-jose[cryptography]==3.5.0
 bcrypt==5.0.0
 httpx==0.28.1
-anthropic==0.97.0
+openai==2.49.0

@@ -24,7 +24,7 @@ export default function FellowshipFinder() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ research_interest: researchInterest, profile }),
-      })
+      }, 180000) // up to 6 searches + a long list — well past the 60s default
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || "Something went wrong.")
       setResult(data.result)

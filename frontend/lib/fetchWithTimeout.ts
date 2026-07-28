@@ -32,7 +32,7 @@ export async function fetchWithTimeout(
   } catch (err) {
     clearTimeout(timeout)
     if (err instanceof Error && err.name === "AbortError") {
-      throw new Error("Request timed out. Claude is taking too long — please try again.")
+      throw new Error("Request timed out — this one takes a while. Please try again.")
     }
     throw new Error("Network error. Please check your connection and try again.")
   }

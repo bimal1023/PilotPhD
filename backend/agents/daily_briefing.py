@@ -1,10 +1,8 @@
-import anthropic
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 from ..config import settings
 from ..models.application import Application, ApplicationStatus
-
-client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+from .llm import client
 
 
 async def generate_daily_briefing(db: Session, user_id: int) -> str:
@@ -52,22 +50,25 @@ async def generate_daily_briefing(db: Session, user_id: int) -> str:
     {chr(10).join([f"- {app.university} ({app.program})" for app in planning]) or "None"}
     """
 
-    response = await client.messages.create(
-        model=settings.claude_model,
-        max_tokens=1024,
-        system=f"""You are a personal PhD application coach giving a briefing.
+    response = await client.chat.completions.create(
+        model=settings.openai_model,
+        max_completion_tokens=1024,
+        messages=[
+            {
+                "role": "system",
+                "content": f"""You are a personal PhD application coach giving a briefing.
         Be concise, motivating, and specific.
         Structure your response as:
         ## {greeting} — Here's Your PhD Focus for Today
         ### Urgent (do today)
         ### This Week
         ### Overall Progress
-        End with one sentence of encouragement.""",
-        messages=[
+        End with one sentence of encouragement."""
+            },
             {
                 "role": "user",
                 "content": f"Generate my daily PhD application briefing:\n{briefing_data}"
             }
         ]
     )
-    return response.content[0].text
+    return response.choices[0].message.content

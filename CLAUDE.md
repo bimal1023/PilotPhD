@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project: PilotPhD
 
-An AI-powered PhD application co-pilot. Students track applications, draft cold emails to professors, refine personal statements, discover fellowships, and find faculty advisors — all backed by Claude AI.
+An AI-powered PhD application co-pilot. Students track applications, draft cold emails to professors, refine personal statements, discover fellowships, and find faculty advisors — all backed by OpenAI models.
 
-**Stack:** FastAPI + SQLAlchemy + PostgreSQL backend · Next.js 16 + React 19 + TypeScript + Tailwind CSS frontend · Anthropic Claude (claude-sonnet-4-20250514) · OpenAlex + Brave Search APIs
+**Stack:** FastAPI + SQLAlchemy + PostgreSQL backend · Next.js 16 + React 19 + TypeScript + Tailwind CSS frontend · OpenAI (gpt-5.6-terra) · OpenAlex + Brave Search APIs
 
 ## Commands
 
@@ -60,11 +60,11 @@ build arg), so changing it requires rebuilding the frontend image, not a restart
 `backend/config.py` — `pydantic-settings` `Settings` object; all env vars live here. Imported as the singleton `settings`.
 
 **Agents** (`backend/agents/`) — Each agent is an async function called directly by the route handler:
-- `email_drafter.py` — Multi-turn agentic loop (up to 6 iterations) with two Claude tools: `web_search` (Brave API) and `read_document`. Generates personalized cold emails.
-- `professor_finder.py` — Queries OpenAlex for faculty candidates, then calls Claude to rank and score by fit.
-- `fellowship_finder.py` — Uses Brave Search + Claude to surface funding opportunities.
-- `statement_refiner.py` — Single Claude call: critique + rewrite of personal statement.
-- `daily_briefing.py` — Reads upcoming deadlines/status from DB, passes to Claude for a structured morning briefing.
+- `email_drafter.py` — Multi-turn agentic loop (up to 6 iterations) with two tools: `web_search` (Brave API) and `read_document`. Generates personalized cold emails.
+- `professor_finder.py` — Queries OpenAlex for faculty candidates, then calls the model to rank and score by fit.
+- `fellowship_finder.py` — Uses Brave Search + the model to surface funding opportunities.
+- `statement_refiner.py` — Single model call: critique + rewrite of personal statement.
+- `daily_briefing.py` — Reads upcoming deadlines/status from DB, passes to the model for a structured morning briefing.
 - `deadline_tracker.py` — Extracts urgent deadlines from DB for the `/deadline-briefing` route.
 
 **Routes** (`backend/routes/`) — Thin handlers that validate input via Pydantic schemas (`schemas.py`), call the relevant agent, and return `{"result": ...}`. Auth routes also manage session cookies and email verification tokens.
@@ -97,14 +97,14 @@ Next.js App Router (`frontend/app/`). Each feature is a separate route directory
 | Variable | Required | Notes |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `ANTHROPIC_API_KEY` | Yes | |
+| `OPENAI_API_KEY` | Yes | Must be non-empty — the OpenAI SDK raises at client construction otherwise, crashing the app at import |
 | `SECRET_KEY` | Yes | JWT signing secret — generate with `python3 -c "import secrets; print(secrets.token_hex(32))"` |
 | `RESEND_API_KEY` | Yes | Email delivery |
 | `FROM_EMAIL` | No | Defaults to `onboarding@resend.dev` |
 | `FRONTEND_URL` | No | Defaults to `http://localhost:3000`; comma-separate multiple origins |
 | `BRAVE_API_KEY` | No | Used by email drafter and fellowship finder |
-| `CLAUDE_MODEL` | No | Defaults to `claude-sonnet-4-20250514` |
-| `ENVIRONMENT` | No | Set to `production` on Render |
+| `OPENAI_MODEL` | No | Defaults to `gpt-5.6-terra`; `gpt-5.6` is the flagship alias, `gpt-5.6-luna` the budget tier |
+| `ENVIRONMENT` | No | Set to `production` on the EC2 box |
 
 ### Frontend (`frontend/.env.local`)
 | Variable | Required |
