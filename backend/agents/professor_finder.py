@@ -1,10 +1,7 @@
 import asyncio
-import json
 import httpx
-import anthropic
 from ..config import settings
-
-client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+from .llm import client, parse_json
 
 OPENALEX_BASE = "https://api.openalex.org"
 MAILTO = settings.from_email  # OpenAlex polite-pool identifier
@@ -227,31 +224,36 @@ async def _find_email(name: str, university: str) -> dict:
     ])
 
     try:
-        response = await client.messages.create(
-            model=settings.claude_model,
-            max_tokens=150,
-            system="""Extract a professor's institutional email from the search results.
+        response = await client.chat.completions.create(
+            model=settings.openai_model,
+            max_completion_tokens=150,
+            messages=[
+                {
+                    "role": "system",
+                    "content": """Extract a professor's institutional email from the search results.
 Return ONLY valid JSON: {"email": "name@university.edu", "source": "https://page-url"}
 If no real email address is visible in the text, return: {"email": null, "source": "https://first-result-url"}
 NEVER invent, guess, or construct an email address.""",
-            messages=[{
-                "role": "user",
-                "content": f"Find email for Professor {name} at {university}:\n\n{context}",
-            }],
+                },
+                {
+                    "role": "user",
+                    "content": f"Find email for Professor {name} at {university}:\n\n{context}",
+                },
+            ],
         )
-        return json.loads(response.content[0].text)
+        return parse_json(response.choices[0].message.content)
     except Exception:
         return {"email": None, "source": results[0]["url"] if results else None}
 
 
-# ── Step 4: Claude ranks all candidates by fit ───────────────────────────────
+# ── Step 4: the model ranks all candidates by fit ────────────────────────────
 
 async def _rank_by_fit(
     candidates: list[dict],
     research_interest: str,
     profile: str,
 ) -> list[dict]:
-    """Ask Claude to score and explain each professor's fit."""
+    """Ask the model to score and explain each professor's fit."""
     summaries = "\n\n".join([
         f"Professor {i}: {c['name']} at {c['university']}\n"
         f"Citations: {c.get('citation_count', 0)} | H-index: {c.get('h_index', 'N/A')}\n"
@@ -260,10 +262,13 @@ async def _rank_by_fit(
     ])
 
     try:
-        response = await client.messages.create(
-            model=settings.claude_model,
-            max_tokens=2500,
-            system="""You are a PhD admissions advisor ranking professors by research fit.
+        response = await client.chat.completions.create(
+            model=settings.openai_model,
+            max_completion_tokens=2500,
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are a PhD admissions advisor ranking professors by research fit.
 Return ONLY a JSON array — no markdown, no text outside the JSON:
 [
   {
@@ -275,16 +280,18 @@ Return ONLY a JSON array — no markdown, no text outside the JSON:
 ]
 Score range: 55–99. Be honest — not everyone is a great match.
 Base scores solely on alignment between the professor's papers and the student's stated interest and profile.""",
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"Research interest: {research_interest}\n\n"
-                    f"Student profile: {profile}\n\n"
-                    f"Professors to rank:\n{summaries}"
-                ),
-            }],
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Research interest: {research_interest}\n\n"
+                        f"Student profile: {profile}\n\n"
+                        f"Professors to rank:\n{summaries}"
+                    ),
+                },
+            ],
         )
-        return json.loads(response.content[0].text)
+        return parse_json(response.choices[0].message.content)
     except Exception:
         return [
             {"index": i, "fit_score": 70, "why": "Relevant research area.", "email_talking_point": ""}

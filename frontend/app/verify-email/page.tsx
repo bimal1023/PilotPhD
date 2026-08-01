@@ -31,7 +31,6 @@ function VerifyEmailContent() {
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.detail || "Verification failed.")
-        localStorage.setItem("pilotphd_token", data.token)
         localStorage.setItem("pilotphd_user", JSON.stringify(data.user))
         setAuthCookie()
         window.dispatchEvent(new StorageEvent("storage", { key: "pilotphd_user", newValue: JSON.stringify(data.user) }))

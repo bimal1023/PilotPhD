@@ -1,0 +1,73 @@
+# Pin the project name. Compose otherwise derives it from the directory ("infra"),
+# which collides with any other project that also keeps its compose file in infra/.
+name: pilotphd
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pilotphd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in infra/.env}
+      POSTGRES_DB: pilotphd
+    volumes:
+      # Separate EBS volume mounted at /mnt/data — survives instance rebuilds.
+      - ${DATA_DIR:-/mnt/data}/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: pilotphd-backend
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # --proxy-headers so rate limiting sees the real client address instead of
+    # Caddy's. Trusting the header from any peer is safe here because port 8000
+    # is never published — only Caddy can reach it, over the compose network.
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
+    healthcheck:
+      # No curl in python:slim — urllib is already there. Use 127.0.0.1, not
+      # localhost: it resolves to ::1 first and the container has no IPv6,
+      # which fails with EADDRNOTAVAIL rather than falling back.
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        # Baked into the client bundle — must be the public API URL, since the
+        # browser (not the container) makes these calls.
+        NEXT_PUBLIC_API_URL: https://api.pilotphd.com
+    container_name: pilotphd-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: pilotphd-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ${DATA_DIR:-/mnt/data}/caddy_data:/data
+      - ${DATA_DIR:-/mnt/data}/caddy_config:/config
+    depends_on:
+      - backend
+      - frontend

@@ -1,0 +1,30 @@
+(security_headers) {
+	header {
+		# Force HTTPS for a year, including subdomains. Remove `preload` if you
+		# ever need to serve a subdomain over plain HTTP.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), interest-cohort=()"
+		# Don't advertise the stack
+		-Server
+	}
+}
+
+pilotphd.com, www.pilotphd.com {
+	import security_headers
+	header {
+		# Next.js needs inline styles and its own inline bootstrap scripts.
+		# connect-src must include the API origin, which the browser calls directly.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://lh3.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://api.pilotphd.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+	}
+	reverse_proxy frontend:3000
+}
+
+api.pilotphd.com {
+	import security_headers
+	# A JSON API renders nothing, so lock it all the way down.
+	header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+	reverse_proxy backend:8000
+}

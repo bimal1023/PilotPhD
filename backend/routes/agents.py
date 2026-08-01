@@ -1,7 +1,8 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from ..auth import get_current_user
+from ..limiter import limiter
 from ..database import get_db
 from ..models.user import User
 from ..schemas import EmailDraftRequest, FellowshipRequest, StatementRequest
@@ -16,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/draft-email")
+@limiter.limit("20/hour")
 async def draft_email_route(
+    request: Request,
     payload: EmailDraftRequest,
     current_user: User = Depends(get_current_user),
 ):
@@ -33,7 +36,9 @@ async def draft_email_route(
 
 
 @router.post("/find-fellowships")
+@limiter.limit("15/hour")
 async def find_fellowships_route(
+    request: Request,
     payload: FellowshipRequest,
     current_user: User = Depends(get_current_user),
 ):
@@ -46,7 +51,9 @@ async def find_fellowships_route(
 
 
 @router.post("/refine-statement")
+@limiter.limit("20/hour")
 async def refine_statement_route(
+    request: Request,
     payload: StatementRequest,
     current_user: User = Depends(get_current_user),
 ):
@@ -59,7 +66,9 @@ async def refine_statement_route(
 
 
 @router.get("/deadline-briefing")
+@limiter.limit("40/hour")
 async def deadline_briefing_route(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -72,7 +81,9 @@ async def deadline_briefing_route(
 
 
 @router.get("/daily-briefing")
+@limiter.limit("40/hour")
 async def daily_briefing_route(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

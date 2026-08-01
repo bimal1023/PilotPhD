@@ -39,8 +39,10 @@ app.add_exception_handler(
 
 app.add_middleware(
     CORSMiddleware,
+    # Explicit allowlist only. A regex over *.vercel.app used to live here; since
+    # vercel.app is a public suffix, anyone could register a matching subdomain
+    # and be granted a credentialed cross-origin response.
     allow_origins=settings.cors_origins,
-    allow_origin_regex=r"https://pilotphd[a-zA-Z0-9\-]*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

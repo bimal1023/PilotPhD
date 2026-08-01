@@ -29,7 +29,7 @@ async def send_email(to: str, subject: str, html: str) -> None:
         raise
     except Exception as e:
         logger.error("Failed to send email to %s: %s", to, e)
-        raise RuntimeError("Email delivery failed — check Render logs")
+        raise RuntimeError("Email delivery failed — check the backend container logs")
 
 
 def _email_wrapper(title: str, body: str) -> str:
@@ -84,7 +84,7 @@ def _email_wrapper(title: str, body: str) -> str:
 
 
 async def send_verification_email(to: str, name: str, token: str) -> None:
-    verify_url = f"{settings.frontend_url}/verify-email?token={token}"
+    verify_url = f"{settings.frontend_base_url}/verify-email?token={token}"
     body = f"""
       <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">
         Hi {name}, welcome to PilotPhD! Please verify your email address to activate your account.
@@ -109,7 +109,7 @@ async def send_verification_email(to: str, name: str, token: str) -> None:
 
 
 async def send_password_reset_email(to: str, name: str, token: str) -> None:
-    reset_url = f"{settings.frontend_url}/reset-password?token={token}"
+    reset_url = f"{settings.frontend_base_url}/reset-password?token={token}"
     body = f"""
       <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">
         Hi {name}, we received a request to reset your PilotPhD password. Click the button below to choose a new one.
