@@ -30,7 +30,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
+    # --proxy-headers so rate limiting sees the real client address instead of
+    # Caddy's. Trusting the header from any peer is safe here because port 8000
+    # is never published — only Caddy can reach it, over the compose network.
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
     healthcheck:
       # No curl in python:slim — urllib is already there. Use 127.0.0.1, not
       # localhost: it resolves to ::1 first and the container has no IPv6,

@@ -8,10 +8,9 @@ export async function fetchWithTimeout(
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("pilotphd_token") : null
-
+  // No Authorization header: the HttpOnly session cookie travels with
+  // credentials: "include" and is not readable by script.
   const headers = new Headers(options.headers as HeadersInit | undefined)
-  if (token) headers.set("Authorization", `Bearer ${token}`)
 
   try {
     const res = await fetch(url, {
@@ -22,7 +21,6 @@ export async function fetchWithTimeout(
     })
     clearTimeout(timeout)
     if (res.status === 401 && typeof window !== "undefined") {
-      localStorage.removeItem("pilotphd_token")
       localStorage.removeItem("pilotphd_user")
       clearAuthCookie()
       window.dispatchEvent(new StorageEvent("storage", { key: "pilotphd_user", newValue: null }))

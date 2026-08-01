@@ -25,12 +25,10 @@ export default function LoginPage() {
     if (didCheck.current) return
     didCheck.current = true
 
-    const token = localStorage.getItem("pilotphd_token")
-    if (token && hasAuthCookie()) {
+    if (hasAuthCookie()) {
       router.replace("/dashboard")
-    } else if (token && !hasAuthCookie()) {
-      // Token in localStorage but no session cookie — expired or signed out elsewhere; clear it
-      localStorage.removeItem("pilotphd_token")
+    } else {
+      // No session cookie — expired or signed out elsewhere; drop the cached profile
       localStorage.removeItem("pilotphd_user")
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,7 +64,9 @@ export default function LoginPage() {
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.detail || "Sign in failed.")
-        localStorage.setItem("pilotphd_token", data.token)
+        // The JWT deliberately stays out of localStorage: the HttpOnly session
+        // cookie already authenticates us, and a readable copy would hand any
+        // XSS a 7-day token. Only the display profile is cached.
         localStorage.setItem("pilotphd_user", JSON.stringify(data.user))
         setAuthCookie()
         window.dispatchEvent(new StorageEvent("storage", { key: "pilotphd_user", newValue: JSON.stringify(data.user) }))
